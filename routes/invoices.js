@@ -119,46 +119,30 @@ router.post("/", async function (req, res, next) {
  * If paying unpaid invoice, set paid_date; if marking as unpaid, clear paid_date.
  * */
 
-router.put("/:id", async function (req, res, next) {
+const { Client } = require('pg');
+const client = new Client({
+  // Your connection details
+});
+
+router.put('/:id', async (req, res) => {
+  const { amt, paid } = req.body;
+  const paid_date = paid ? new Date().toISOString() : null;
+
   try {
-    let {amt, paid} = req.body;
-    let id = req.params.id;
-    let paidDate = null;
-
-    const currResult = await db.query(
-          `SELECT paid
-           FROM invoices
-           WHERE id = $1`,
-        [id]);
-
-    if (currResult.rows.length === 0) {
-      throw new ExpressError(`No such invoice: ${id}`, 404);
-    }
-
-    const currPaidDate = currResult.rows[0].paid_date;
-
-    if (!currPaidDate && paid) {
-      paidDate = new Date();
-    } else if (!paid) {
-      paidDate = null
-    } else {
-      paidDate = currPaidDate;
-    }
-
     const result = await db.query(
-          `UPDATE invoices
-           SET amt=$1, paid=$2, paid_date=$3
-           WHERE id=$4
-           RETURNING id, comp_code, amt, paid, add_date, paid_date`,
-        [amt, paid, paidDate, id]);
-
-    return res.json({"invoice": result.rows[0]});
+      `UPDATE invoices
+       SET amt = $1, paid = $2, paid_date = $3
+       WHERE id = $4
+       RETURNING *`,
+      [amt, paid, paid_date, req.params.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+    res.json({ invoice: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  catch (err) {
-    return next(err);
-  }
-
 });
 
 
