@@ -137,7 +137,7 @@ router.put('/:id', async (req, res) => {
       [amt, paid, paid_date, req.params.id]
     );
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Invoice not found' });
+      return res.status(404).json({ error: 'Invoice not found' }); 
     }
     res.json({ invoice: result.rows[0] });
   } catch (err) {
